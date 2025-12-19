@@ -1,56 +1,66 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown-dark.css';
 
-interface Note {
-  id: string;
-  title: string;
-  filename: string;
-  date: string;
-}
-
 export const NoteView = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const location = useLocation();
   const [content, setContent] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // First fetch the index to find the filename for this ID
-    // In a real app, you might just use the ID as filename or have a better API
-    fetch('/go/index.json')
-      .then(res => res.json())
-      .then((notes: Note[]) => {
-        const note = notes.find(n => n.id === id);
-        if (!note) {
-          navigate('/');
-          return;
-        }
-        
-        return fetch(`/go/${note.filename}`);
-      })
+    // If root path, show welcome message or nothing
+    if (location.pathname === '/') {
+      setContent('# Select a note from the sidebar');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    // The path in URL corresponds to the file path in public
+    // e.g. /go/welcome.md -> fetch('/go/welcome.md')
+    const filePath = location.pathname;
+
+    fetch(filePath)
       .then(res => {
-        if (!res) return;
+        if (!res.ok) {
+          if (res.headers.get('content-type')?.includes('text/html')) {
+             throw new Error('File not found (received HTML instead of Markdown)');
+          }
+          throw new Error(`Failed to load note: ${res.statusText}`);
+        }
         return res.text();
       })
       .then(text => {
-        if (text) {
-          setContent(text);
-          setLoading(false);
+        // Basic check to ensure we didn't get the index.html (SPA fallback)
+        if (text.trim().startsWith('<!doctype html>')) {
+           throw new Error('File not found');
         }
+        setContent(text);
+        setLoading(false);
       })
       .catch(err => {
         console.error('Failed to load note', err);
+        setError(err.message);
         setLoading(false);
       });
-  }, [id, navigate]);
+  }, [location.pathname]);
 
-  if (loading) return <div>Loading note...</div>;
+  if (loading) return <div style={{ padding: '2rem', color: '#888' }}>Loading note...</div>;
+  
+  if (error) return (
+    <div style={{ padding: '2rem', color: '#ff6b6b' }}>
+      <h2>Error</h2>
+      <p>{error}</p>
+      <p>Path: {location.pathname}</p>
+    </div>
+  );
 
   return (
-    <div className="markdown-body" style={{ backgroundColor: 'transparent', padding: '1rem 0' }}>
+    <div className="markdown-body" style={{ backgroundColor: 'transparent', paddingBottom: '4rem' }}>
       <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
     </div>
   );

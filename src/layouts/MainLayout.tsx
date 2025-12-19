@@ -1,30 +1,24 @@
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
+import { Sidebar } from '../components/Sidebar';
 
 export const MainLayout = () => {
   return (
     <div style={{ 
       display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh', 
+      height: '100vh', 
       width: '100%',
-      maxWidth: '1200px',
-      margin: '0 auto',
-      padding: '2rem'
+      overflow: 'hidden'
     }}>
-      <header style={{ 
-        marginBottom: '2rem', 
-        borderBottom: '1px solid #333', 
-        paddingBottom: '1rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
+      <Sidebar />
+      <main style={{ 
+        flex: 1, 
+        overflowY: 'auto',
+        backgroundColor: '#242424',
+        position: 'relative'
       }}>
-        <Link to="/" style={{ textDecoration: 'none', color: 'white' }}>
-          <h1 style={{ margin: 0, fontSize: '1.5rem' }}>Notes App</h1>
-        </Link>
-      </header>
-      <main style={{ flex: 1 }}>
-        <Outlet />
+        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 3rem' }}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );

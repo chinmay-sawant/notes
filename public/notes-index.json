@@ -1,0 +1,40 @@
+[
+  {
+    "name": "go",
+    "type": "directory",
+    "path": "go",
+    "children": [
+      {
+        "name": "ideas.md",
+        "type": "file",
+        "path": "go/ideas.md",
+        "title": "Project Ideas"
+      },
+      {
+        "name": "react-hooks.md",
+        "type": "file",
+        "path": "go/react-hooks.md",
+        "title": "React Hooks Guide"
+      },
+      {
+        "name": "welcome.md",
+        "type": "file",
+        "path": "go/welcome.md",
+        "title": "Welcome to Notes App"
+      }
+    ]
+  },
+  {
+    "name": "java",
+    "type": "directory",
+    "path": "java",
+    "children": [
+      {
+        "name": "basics.md",
+        "type": "file",
+        "path": "java/basics.md",
+        "title": "Java Basics"
+      }
+    ]
+  }
+]
