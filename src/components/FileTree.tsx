@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { ChevronRight, ChevronDown, FileText, Folder } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 export interface FileNode {
@@ -13,32 +11,53 @@ export interface FileNode {
 interface FileTreeProps {
   nodes: FileNode[];
   level?: number;
+  expandedPaths: ReadonlySet<string>;
+  onToggleDir: (path: string) => void;
 }
 
-export const FileTree = ({ nodes, level = 0 }: FileTreeProps) => {
+export const FileTree = ({ nodes, level = 0, expandedPaths, onToggleDir }: FileTreeProps) => {
   const location = useLocation();
 
   return (
     <div style={{ paddingLeft: level ? '12px' : '0' }}>
       {nodes.map((node) => (
-        <FileTreeNode key={node.path} node={node} level={level} currentPath={location.pathname} />
+        <FileTreeNode
+          key={node.path}
+          node={node}
+          level={level}
+          currentPath={location.pathname}
+          expandedPaths={expandedPaths}
+          onToggleDir={onToggleDir}
+        />
       ))}
     </div>
   );
 };
 
-const FileTreeNode = ({ node, level, currentPath }: { node: FileNode; level: number; currentPath: string }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const FileTreeNode = ({
+  node,
+  level,
+  currentPath,
+  expandedPaths,
+  onToggleDir,
+}: {
+  node: FileNode;
+  level: number;
+  currentPath: string;
+  expandedPaths: ReadonlySet<string>;
+  onToggleDir: (path: string) => void;
+}) => {
   
   // Check if this file is currently active
   // We decodeURIComponent because URL paths might be encoded
   const isActive = node.type === 'file' && decodeURIComponent(currentPath) === `/${node.path}`;
+  const isOpen = node.type === 'directory' && expandedPaths.has(node.path);
 
   if (node.type === 'directory') {
     return (
       <div>
         <div 
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => onToggleDir(node.path)}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -49,18 +68,19 @@ const FileTreeNode = ({ node, level, currentPath }: { node: FileNode; level: num
             userSelect: 'none',
             borderRadius: '4px',
           }}
-          className="hover:bg-gray-800"
+          className="tree-row"
+          title={`${isOpen ? 'Collapse' : 'Expand'} folder: ${node.path}`}
         >
-          <span style={{ marginRight: '4px', display: 'flex' }}>
-            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <span style={{ width: '18px', marginRight: '4px', textAlign: 'center', opacity: 0.9 }}>
+            {isOpen ? '▾' : '▸'}
           </span>
-          <span style={{ marginRight: '6px', color: '#fbbf24' }}>
-            <Folder size={16} fill="currentColor" />
+          <span style={{ width: '18px', marginRight: '6px' }}>
+            {isOpen ? '📂' : '📁'}
           </span>
           <span style={{ fontWeight: 500 }}>{node.name}</span>
         </div>
         {isOpen && node.children && (
-          <FileTree nodes={node.children} level={level + 1} />
+          <FileTree nodes={node.children} level={level + 1} expandedPaths={expandedPaths} onToggleDir={onToggleDir} />
         )}
       </div>
     );
@@ -81,10 +101,10 @@ const FileTreeNode = ({ node, level, currentPath }: { node: FileNode; level: num
         borderRadius: '4px',
         marginBottom: '1px'
       }}
+      className="tree-row"
+      title={node.path}
     >
-      <span style={{ marginRight: '6px' }}>
-        <FileText size={14} />
-      </span>
+      <span style={{ width: '18px', marginRight: '6px' }}>📝</span>
       <span style={{ 
         whiteSpace: 'nowrap', 
         overflow: 'hidden', 
