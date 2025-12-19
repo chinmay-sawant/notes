@@ -14,8 +14,11 @@ export const Sidebar = () => {
   const [devModalOpen, setDevModalOpen] = useState(false);
   const [devModalMode, setDevModalMode] = useState<'new-file' | 'new-folder' | 'from-clipboard'>('new-file');
   const [devModalTitle, setDevModalTitle] = useState('');
+  const [devModalDefaultFolderPath, setDevModalDefaultFolderPath] = useState('');
   const [devModalDefaultFileName, setDevModalDefaultFileName] = useState('');
   const [devModalInitialContent, setDevModalInitialContent] = useState('');
+
+  const [selectedFolderPath, setSelectedFolderPath] = useState('');
 
   const showDevTools = typeof window !== 'undefined' && window.location.href.includes('localhost');
 
@@ -52,6 +55,26 @@ export const Sidebar = () => {
     walk(treeData, 0);
     return options;
   }, [treeData]);
+
+  const bestDefaultFolderPath = useMemo(() => {
+    const available = new Set(folderOptions.map((o) => o.path));
+
+    if (selectedFolderPath && available.has(selectedFolderPath)) return selectedFolderPath;
+
+    // Fall back to the parent folder of the currently open route (if any).
+    const pathname = location.pathname;
+    if (pathname && pathname !== '/') {
+      const clean = pathname.startsWith('/') ? pathname.slice(1) : pathname;
+      const parts = clean.split('/').filter(Boolean);
+      if (parts.length > 1) {
+        const folder = parts.slice(0, -1).join('/');
+        if (available.has(folder)) return folder;
+      }
+    }
+
+    // Default to root instead of arbitrarily picking the first folder.
+    return '';
+  }, [folderOptions, location.pathname, selectedFolderPath]);
 
   const fetchIndex = async () => {
     const baseUrl = import.meta.env.BASE_URL;
@@ -117,6 +140,8 @@ export const Sidebar = () => {
   const openDevModal = async (mode: 'new-file' | 'new-folder' | 'from-clipboard') => {
     if (!showDevTools) return;
 
+    // Capture the best folder at the moment the modal opens.
+    setDevModalDefaultFolderPath(bestDefaultFolderPath);
     setDevModalMode(mode);
 
     if (mode === 'new-folder') {
@@ -289,7 +314,7 @@ export const Sidebar = () => {
         mode={devModalMode}
         title={devModalTitle}
         folderOptions={folderOptions}
-        defaultFolderPath={folderOptions.find((o) => o.path)?.path ?? ''}
+        defaultFolderPath={devModalDefaultFolderPath}
         defaultFileName={devModalDefaultFileName}
         initialContent={devModalInitialContent}
         onClose={() => setDevModalOpen(false)}
@@ -297,7 +322,22 @@ export const Sidebar = () => {
       />
       
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
-        <FileTree nodes={treeData} expandedPaths={expandedPaths} onToggleDir={toggleDir} />
+        <FileTree
+          nodes={treeData}
+          expandedPaths={expandedPaths}
+          onToggleDir={toggleDir}
+          onSelectPath={(path, type) => {
+            if (type === 'directory') {
+              setSelectedFolderPath(path);
+              return;
+            }
+
+            // file: pick its parent folder
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length > 1) setSelectedFolderPath(parts.slice(0, -1).join('/'));
+            else setSelectedFolderPath('');
+          }}
+        />
       </div>
 
       {/* Resizer Handle */}

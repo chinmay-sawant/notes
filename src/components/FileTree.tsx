@@ -13,9 +13,10 @@ interface FileTreeProps {
   level?: number;
   expandedPaths: ReadonlySet<string>;
   onToggleDir: (path: string) => void;
+  onSelectPath?: (path: string, type: FileNode['type']) => void;
 }
 
-export const FileTree = ({ nodes, level = 0, expandedPaths, onToggleDir }: FileTreeProps) => {
+export const FileTree = ({ nodes, level = 0, expandedPaths, onToggleDir, onSelectPath }: FileTreeProps) => {
   const location = useLocation();
 
   return (
@@ -28,6 +29,7 @@ export const FileTree = ({ nodes, level = 0, expandedPaths, onToggleDir }: FileT
           currentPath={location.pathname}
           expandedPaths={expandedPaths}
           onToggleDir={onToggleDir}
+          onSelectPath={onSelectPath}
         />
       ))}
     </div>
@@ -40,12 +42,14 @@ const FileTreeNode = ({
   currentPath,
   expandedPaths,
   onToggleDir,
+  onSelectPath,
 }: {
   node: FileNode;
   level: number;
   currentPath: string;
   expandedPaths: ReadonlySet<string>;
   onToggleDir: (path: string) => void;
+  onSelectPath?: (path: string, type: FileNode['type']) => void;
 }) => {
   
   // Check if this file is currently active
@@ -57,7 +61,10 @@ const FileTreeNode = ({
     return (
       <div>
         <div 
-          onClick={() => onToggleDir(node.path)}
+          onClick={() => {
+            onSelectPath?.(node.path, 'directory');
+            onToggleDir(node.path);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -80,7 +87,13 @@ const FileTreeNode = ({
           <span style={{ fontWeight: 500 }}>{node.name}</span>
         </div>
         {isOpen && node.children && (
-          <FileTree nodes={node.children} level={level + 1} expandedPaths={expandedPaths} onToggleDir={onToggleDir} />
+          <FileTree
+            nodes={node.children}
+            level={level + 1}
+            expandedPaths={expandedPaths}
+            onToggleDir={onToggleDir}
+            onSelectPath={onSelectPath}
+          />
         )}
       </div>
     );
@@ -89,6 +102,7 @@ const FileTreeNode = ({
   return (
     <Link 
       to={`/${node.path}`}
+      onClick={() => onSelectPath?.(node.path, 'file')}
       style={{
         display: 'flex',
         alignItems: 'center',
