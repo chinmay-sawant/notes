@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FileTree, FileNode } from './FileTree';
 import { DevToolsModal, type DevToolsModalSubmit } from './DevToolsModal';
+import { getTheme, toggleTheme, subscribeTheme, type Theme } from '../theme';
 
 export const Sidebar = () => {
   const [width, setWidth] = useState(250);
   const [isResizing, setIsResizing] = useState(false);
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
+  const [theme, setThemeState] = useState<Theme>(getTheme);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
@@ -21,6 +23,16 @@ export const Sidebar = () => {
   const [selectedFolderPath, setSelectedFolderPath] = useState('');
 
   const showDevTools = typeof window !== 'undefined' && window.location.href.includes('localhost');
+
+  // Sync with theme changes
+  useEffect(() => {
+    return subscribeTheme(setThemeState);
+  }, []);
+
+  const handleToggleTheme = () => {
+    const next = toggleTheme();
+    setThemeState(next);
+  };
 
   const allDirPaths = useMemo(() => {
     const dirs: string[] = [];
@@ -217,18 +229,19 @@ export const Sidebar = () => {
   };
 
   const iconBtn: React.CSSProperties = {
-    width: '24px',
-    height: '24px',
+    width: '28px',
+    height: '28px',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '6px',
-    border: '1px solid #333',
+    border: '1px solid var(--border-color)',
     background: 'transparent',
-    color: '#ddd',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
-    fontSize: '12px',
+    fontSize: '14px',
     lineHeight: 1,
+    transition: 'all 0.15s ease',
   };
 
   useEffect(() => {
@@ -259,27 +272,39 @@ export const Sidebar = () => {
       style={{ 
         width: width, 
         minWidth: width,
-        backgroundColor: '#1a1a1a', 
-        borderRight: '1px solid #333',
+        backgroundColor: 'var(--bg-primary)', 
+        borderRight: '1px solid var(--border-color)',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
         height: '100vh',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
       }}
     >
       <div style={{ 
-        padding: '0.75rem 1rem', 
-        borderBottom: '1px solid #333',
-        fontWeight: 'bold',
-        fontSize: '1.1rem',
+        padding: '1rem 1rem 0.75rem', 
+        borderBottom: '1px solid var(--border-color)',
+        color: 'var(--text-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'stretch',
-        gap: '0.5rem'
+        gap: '0.75rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>Notes</div>
+          <div style={{ 
+            fontWeight: 600, 
+            fontSize: '1.125rem',
+            letterSpacing: '-0.01em',
+          }}>Notes</div>
+          <button 
+            className="toolbtn" 
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} 
+            style={{...iconBtn, border: 'none', width: '32px', height: '32px', fontSize: '16px'}} 
+            onClick={handleToggleTheme}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
 
         {showDevTools && (
@@ -321,7 +346,7 @@ export const Sidebar = () => {
         onSubmit={submitDevModal}
       />
       
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 0.5rem' }}>
         <FileTree
           nodes={treeData}
           expandedPaths={expandedPaths}
@@ -350,7 +375,7 @@ export const Sidebar = () => {
           bottom: 0,
           width: '4px',
           cursor: 'col-resize',
-          backgroundColor: isResizing ? '#646cff' : 'transparent',
+          backgroundColor: isResizing ? 'var(--accent)' : 'transparent',
           transition: 'background-color 0.2s',
           zIndex: 10
         }}
@@ -358,16 +383,17 @@ export const Sidebar = () => {
       />
       <style>{`
         .resizer-handle:hover {
-          background-color: #646cff !important;
+          background-color: var(--accent) !important;
         }
 
         .tree-row:hover {
-          background-color: rgba(255, 255, 255, 0.06);
+          background-color: var(--bg-hover);
         }
 
         .toolbtn:hover {
-          border-color: rgba(100, 108, 255, 0.8) !important;
-          background-color: rgba(100, 108, 255, 0.08) !important;
+          border-color: var(--accent) !important;
+          background-color: var(--accent-bg) !important;
+          color: var(--text-primary) !important;
         }
 
         /* Simple tooltip */
@@ -378,18 +404,18 @@ export const Sidebar = () => {
         .toolbtn:hover::after {
           content: attr(data-tip);
           position: absolute;
-          top: 30px;
+          top: 32px;
           right: 0;
-          background: rgba(10, 10, 10, 0.95);
-          border: 1px solid #333;
-          color: #ddd;
-          padding: 6px 8px;
+          background: var(--bg-primary);
+          border: 1px solid var(--border-color);
+          color: var(--text-secondary);
+          padding: 6px 10px;
           border-radius: 6px;
           font-size: 12px;
           white-space: nowrap;
           z-index: 50;
           pointer-events: none;
-          box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
       `}</style>
     </div>

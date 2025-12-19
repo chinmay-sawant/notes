@@ -68,21 +68,31 @@ const FileTreeNode = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            padding: '4px 8px',
+            padding: '7px 10px',
             cursor: 'pointer',
-            color: '#e0e0e0',
-            fontSize: '0.9rem',
+            color: 'var(--text-primary)',
+            fontSize: '0.875rem',
             userSelect: 'none',
-            borderRadius: '4px',
+            borderRadius: '6px',
+            transition: 'background-color 0.15s ease',
+            marginBottom: '1px',
           }}
           className="tree-row"
           title={`${isOpen ? 'Collapse' : 'Expand'} folder: ${node.path}`}
         >
-          <span style={{ width: '18px', marginRight: '4px', textAlign: 'center', opacity: 0.9 }}>
-            {isOpen ? '▾' : '▸'}
-          </span>
-          <span style={{ width: '18px', marginRight: '6px' }}>
-            {isOpen ? '📂' : '📁'}
+          <span style={{ 
+            width: '20px', 
+            height: '20px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: '8px', 
+            color: 'var(--text-muted)',
+            fontSize: '11px',
+            transition: 'transform 0.15s ease',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+          }}>
+            ▶
           </span>
           <span style={{ fontWeight: 500 }}>{node.name}</span>
         </div>
@@ -106,19 +116,29 @@ const FileTreeNode = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '4px 8px',
-        paddingLeft: '28px', // Indent to align with folder text
+        padding: '7px 10px',
+        paddingLeft: '38px',
         textDecoration: 'none',
-        color: isActive ? '#646cff' : '#a0a0a0',
-        fontSize: '0.9rem',
-        backgroundColor: isActive ? 'rgba(100, 108, 255, 0.1)' : 'transparent',
-        borderRadius: '4px',
-        marginBottom: '1px'
+        color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+        fontSize: '0.875rem',
+        backgroundColor: isActive ? 'var(--accent-bg)' : 'transparent',
+        borderRadius: '6px',
+        marginBottom: '1px',
+        transition: 'all 0.15s ease',
+        fontWeight: isActive ? 500 : 400,
       }}
       className="tree-row"
       title={node.path}
     >
-      <span style={{ width: '18px', marginRight: '6px' }}>📝</span>
+      <span style={{ 
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        backgroundColor: isActive ? 'var(--accent)' : 'var(--text-muted)',
+        marginRight: '10px',
+        flexShrink: 0,
+        opacity: isActive ? 1 : 0.5,
+      }} />
       <span style={{ 
         whiteSpace: 'nowrap', 
         overflow: 'hidden', 

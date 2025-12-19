@@ -3,12 +3,19 @@ import { useLocation } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import 'github-markdown-css/github-markdown-dark.css';
+import 'github-markdown-css/github-markdown-light.css';
+import { getTheme, subscribeTheme, type Theme } from '../theme';
 
 export const NoteView = () => {
   const location = useLocation();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [theme, setTheme] = useState<Theme>(getTheme);
+
+  useEffect(() => {
+    return subscribeTheme(setTheme);
+  }, []);
 
   useEffect(() => {
     // If root path, show welcome message or nothing
@@ -54,18 +61,20 @@ export const NoteView = () => {
       });
   }, [location.pathname]);
 
-  if (loading) return <div style={{ padding: '2rem', color: '#888' }}>Loading note...</div>;
+  if (loading) return <div style={{ padding: '2rem', color: 'var(--text-muted)' }}>Loading note...</div>;
   
   if (error) return (
-    <div style={{ padding: '2rem', color: '#ff6b6b' }}>
+    <div style={{ padding: '2rem', color: '#e57373' }}>
       <h2>Error</h2>
       <p>{error}</p>
-      <p>Path: {location.pathname}</p>
+      <p style={{ color: 'var(--text-muted)' }}>Path: {location.pathname}</p>
     </div>
   );
 
+  const markdownClass = theme === 'dark' ? 'markdown-body markdown-body-dark' : 'markdown-body markdown-body-light';
+
   return (
-    <div className="markdown-body" style={{ backgroundColor: 'transparent', paddingBottom: '4rem' }}>
+    <div className={markdownClass} style={{ backgroundColor: 'transparent', paddingBottom: '4rem' }}>
       <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
     </div>
   );

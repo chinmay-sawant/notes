@@ -15,15 +15,18 @@ export const MainLayout = () => {
         minWidth: 0,
         overflowY: 'auto',
         overflowX: 'hidden',
-        backgroundColor: '#242424',
+        backgroundColor: 'var(--bg-secondary)',
         position: 'relative',
-        padding: '2rem 3rem',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        transition: 'background-color 0.2s ease',
       }}>
         <div
           style={{
+            maxWidth: '900px',
             width: '100%',
-            minWidth: 0,
+            margin: '0 auto',
+            padding: '2.5rem 3rem 4rem',
+            boxSizing: 'border-box',
           }}
         >
           <Outlet />
