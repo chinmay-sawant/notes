@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { FileTree, FileNode } from './FileTree';
+import { DevToolsModal, type DevToolsModalSubmit } from './DevToolsModal';
 
 export const Sidebar = () => {
   const [width, setWidth] = useState(250);
   const [isResizing, setIsResizing] = useState(false);
   const [treeData, setTreeData] = useState<FileNode[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => new Set());
-  const [publicDirHandle, setPublicDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  const [devModalOpen, setDevModalOpen] = useState(false);
+  const [devModalMode, setDevModalMode] = useState<'new-file' | 'new-folder' | 'from-clipboard'>('new-file');
+  const [devModalTitle, setDevModalTitle] = useState('');
+  const [devModalDefaultFileName, setDevModalDefaultFileName] = useState('');
+  const [devModalInitialContent, setDevModalInitialContent] = useState('');
 
   const showDevTools = typeof window !== 'undefined' && window.location.href.includes('localhost');
 
@@ -99,38 +105,7 @@ export const Sidebar = () => {
     });
   };
 
-  const ensureFsApi = () => {
-    if (!showDevTools) throw new Error('Dev tools are disabled on non-localhost URLs');
-    if (!window.isSecureContext) throw new Error('Requires a secure context (localhost is OK)');
-    if (!('showDirectoryPicker' in window)) throw new Error('File System Access API not available in this browser');
-  };
-
-  const getPublicHandle = async () => {
-    ensureFsApi();
-    if (publicDirHandle) return publicDirHandle;
-    // Ask user to pick the /public folder in this repo
-    const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-    setPublicDirHandle(handle);
-    return handle as FileSystemDirectoryHandle;
-  };
-
-  const getDirHandleByPath = async (root: FileSystemDirectoryHandle, relPath: string, create: boolean) => {
-    const parts = relPath.split('/').filter(Boolean);
-    let dir = root;
-    for (const part of parts) {
-      dir = await dir.getDirectoryHandle(part, { create });
-    }
-    return dir;
-  };
-
-  const promptFolderPath = () => {
-    const defaultValue = folderOptions.find((o) => o.path)?.path ?? '';
-    const val = window.prompt(
-      'Folder under public (e.g. go/java). Leave empty for /public root:',
-      defaultValue,
-    );
-    return val === null ? null : val.trim().replace(/^\/+/, '').replace(/\/+$/, '');
-  };
+  const isoStamp = () => new Date().toISOString().replace(/[:.]/g, '-');
 
   const refreshIndexAndReload = async () => {
     // Regenerate on dev server, then re-fetch.
@@ -139,82 +114,73 @@ export const Sidebar = () => {
     await fetchIndex();
   };
 
-  const onNewFolder = async () => {
-    try {
-      // IMPORTANT: some browsers require showDirectoryPicker to be the first awaited
-      // action in a user-gesture handler. Do this before prompts/other async work.
-      const publicHandle = await getPublicHandle();
+  const openDevModal = async (mode: 'new-file' | 'new-folder' | 'from-clipboard') => {
+    if (!showDevTools) return;
 
-      const folder = promptFolderPath();
-      if (folder === null) return;
-      const name = window.prompt('New folder name:', `folder-${Date.now()}`);
-      if (!name) return;
+    setDevModalMode(mode);
 
-      const targetDir = await getDirHandleByPath(publicHandle, folder, true);
-      await targetDir.getDirectoryHandle(name, { create: true });
-      await refreshIndexAndReload();
-    } catch (e: any) {
-      alert(e?.message ?? String(e));
+    if (mode === 'new-folder') {
+      setDevModalTitle('Create folder');
+      setDevModalDefaultFileName('');
+      setDevModalInitialContent('');
     }
-  };
 
-  const onNewFile = async () => {
-    try {
-      // IMPORTANT: some browsers require showDirectoryPicker to be the first awaited
-      // action in a user-gesture handler. Do this before prompts/other async work.
-      const publicHandle = await getPublicHandle();
-
-      const folder = promptFolderPath();
-      if (folder === null) return;
-
-      const defaultName = `note-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
-      const nameInput = window.prompt('New markdown file name (.md):', defaultName);
-      if (!nameInput) return;
-      const fileName = nameInput.endsWith('.md') ? nameInput : `${nameInput}.md`;
-
-      const targetDir = await getDirHandleByPath(publicHandle, folder, true);
-      const fileHandle = await targetDir.getFileHandle(fileName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(`# ${fileName.replace(/\.md$/, '')}\n\n`);
-      await writable.close();
-      await refreshIndexAndReload();
-    } catch (e: any) {
-      alert(e?.message ?? String(e));
+    if (mode === 'new-file') {
+      setDevModalTitle('Create markdown file');
+      setDevModalDefaultFileName(`note-${isoStamp()}.md`);
+      setDevModalInitialContent('');
     }
-  };
 
-  const onFromClipboard = async () => {
-    try {
-      // IMPORTANT: some browsers require showDirectoryPicker to be the first awaited
-      // action in a user-gesture handler. Do this before prompts/other async work.
-      const publicHandle = await getPublicHandle();
-
-      const folder = promptFolderPath();
-      if (folder === null) return;
-
-      const defaultName = `clip-${new Date().toISOString().replace(/[:.]/g, '-')}.md`;
-      const nameInput = window.prompt('Markdown file name for clipboard content (.md):', defaultName);
-      if (!nameInput) return;
-      const fileName = nameInput.endsWith('.md') ? nameInput : `${nameInput}.md`;
-
+    if (mode === 'from-clipboard') {
+      setDevModalTitle('Create from clipboard');
+      setDevModalDefaultFileName(`clip-${isoStamp()}.md`);
       let text = '';
       try {
         text = await navigator.clipboard.readText();
       } catch {
-        const manual = window.prompt('Clipboard read blocked. Paste content here:', '');
-        if (manual === null) return;
-        text = manual;
+        text = '';
       }
-
-      const targetDir = await getDirHandleByPath(publicHandle, folder, true);
-      const fileHandle = await targetDir.getFileHandle(fileName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(text);
-      await writable.close();
-      await refreshIndexAndReload();
-    } catch (e: any) {
-      alert(e?.message ?? String(e));
+      setDevModalInitialContent(text);
     }
+
+    setDevModalOpen(true);
+  };
+
+  const submitDevModal = async (payload: DevToolsModalSubmit) => {
+    const baseUrl = import.meta.env.BASE_URL;
+    const toJson = (obj: unknown) => JSON.stringify(obj);
+
+    if (payload.mode === 'new-folder') {
+      const res = await fetch(`${baseUrl}__notes/mkdir`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: toJson({ folderPath: payload.folderPath, folderName: payload.folderName }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to create folder');
+    }
+
+    if (payload.mode === 'new-file') {
+      const res = await fetch(`${baseUrl}__notes/write`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: toJson({ folderPath: payload.folderPath, fileName: payload.fileName, content: `# ${payload.fileName.replace(/\\.md$/, '')}\n\n` }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to create file');
+    }
+
+    if (payload.mode === 'from-clipboard') {
+      const res = await fetch(`${baseUrl}__notes/write`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: toJson({ folderPath: payload.folderPath, fileName: payload.fileName, content: payload.content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Failed to create file');
+    }
+
+    await refreshIndexAndReload();
   };
 
   const onRefresh = async () => {
@@ -293,10 +259,10 @@ export const Sidebar = () => {
 
         {showDevTools && (
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <button className="toolbtn" data-tip="New file" title="New file" style={iconBtn} onClick={onNewFile}>
+            <button className="toolbtn" data-tip="New file" title="New file" style={iconBtn} onClick={() => openDevModal('new-file')}>
               📝
             </button>
-            <button className="toolbtn" data-tip="New folder" title="New folder" style={iconBtn} onClick={onNewFolder}>
+            <button className="toolbtn" data-tip="New folder" title="New folder" style={iconBtn} onClick={() => openDevModal('new-folder')}>
               📁
             </button>
             <button className="toolbtn" data-tip="Refresh index" title="Refresh index" style={iconBtn} onClick={onRefresh}>
@@ -311,12 +277,24 @@ export const Sidebar = () => {
             >
               🗂️
             </button>
-            <button className="toolbtn" data-tip="From clipboard" title="From clipboard" style={iconBtn} onClick={onFromClipboard}>
+            <button className="toolbtn" data-tip="From clipboard" title="From clipboard" style={iconBtn} onClick={() => openDevModal('from-clipboard')}>
               📋
             </button>
           </div>
         )}
       </div>
+
+      <DevToolsModal
+        open={devModalOpen}
+        mode={devModalMode}
+        title={devModalTitle}
+        folderOptions={folderOptions}
+        defaultFolderPath={folderOptions.find((o) => o.path)?.path ?? ''}
+        defaultFileName={devModalDefaultFileName}
+        initialContent={devModalInitialContent}
+        onClose={() => setDevModalOpen(false)}
+        onSubmit={submitDevModal}
+      />
       
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
         <FileTree nodes={treeData} expandedPaths={expandedPaths} onToggleDir={toggleDir} />
