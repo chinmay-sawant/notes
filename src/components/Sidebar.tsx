@@ -8,7 +8,8 @@ export const Sidebar = () => {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch('/notes-index.json')
+    const baseUrl = import.meta.env.BASE_URL;
+    fetch(`${baseUrl}notes-index.json`)
       .then(res => res.json())
       .then(data => setTreeData(data))
       .catch(err => console.error('Failed to load notes index', err));

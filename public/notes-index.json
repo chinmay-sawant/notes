@@ -34,6 +34,12 @@
         "type": "file",
         "path": "java/basics.md",
         "title": "Java Basics"
+      },
+      {
+        "name": "new.md",
+        "type": "file",
+        "path": "java/new.md",
+        "title": "new"
       }
     ]
   }

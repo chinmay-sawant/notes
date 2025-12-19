@@ -22,7 +22,12 @@ export const NoteView = () => {
     
     // The path in URL corresponds to the file path in public
     // e.g. /go/welcome.md -> fetch('/go/welcome.md')
-    const filePath = location.pathname;
+    // With HashRouter, location.pathname is the path after #
+    // We need to prepend the base URL to fetch the file correctly
+    const baseUrl = import.meta.env.BASE_URL;
+    // Remove leading slash from pathname if it exists to join cleanly with base
+    const cleanPath = location.pathname.startsWith('/') ? location.pathname.slice(1) : location.pathname;
+    const filePath = `${baseUrl}${cleanPath}`;
 
     fetch(filePath)
       .then(res => {

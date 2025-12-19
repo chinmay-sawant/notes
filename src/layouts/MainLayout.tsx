@@ -12,11 +12,20 @@ export const MainLayout = () => {
       <Sidebar />
       <main style={{ 
         flex: 1, 
+        minWidth: 0,
         overflowY: 'auto',
+        overflowX: 'hidden',
         backgroundColor: '#242424',
-        position: 'relative'
+        position: 'relative',
+        padding: '2rem 3rem',
+        boxSizing: 'border-box'
       }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem 3rem' }}>
+        <div
+          style={{
+            width: '100%',
+            minWidth: 0,
+          }}
+        >
           <Outlet />
         </div>
       </main>
